@@ -20,6 +20,7 @@ from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
 from kivy.properties import ListProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -52,7 +53,7 @@ class InputScreen(Screen):
             font_name='SimHei',
             bold=True,
             color=hex_to_rgba(COLORS['accent_red']),
-            pos_hint={'center_x': 0.5, 'center_y': 0.92}
+            pos_hint={'center_x': 0.5, 'center_y': 0.95}
         )
         layout.add_widget(title)
 
@@ -61,7 +62,7 @@ class InputScreen(Screen):
             orientation='vertical',
             spacing=dp(15),
             size_hint=(0.9, 0.75),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            pos_hint={'center_x': 0.5, 'center_y': 0.48}
         )
 
         # 输入框区域
@@ -69,8 +70,8 @@ class InputScreen(Screen):
             orientation='vertical',
             spacing=dp(5),
             size_hint_y=None,
-            height=dp(115),
-            padding=[dp(10), dp(5), dp(10), dp(10)]  # 上内边距减小，让字体上移
+            height=dp(105),
+            padding=[dp(10), dp(2), dp(10), dp(10)]  # 上内边距减小，让字体上移
         )
 
         with input_box.canvas.before:
@@ -87,7 +88,7 @@ class InputScreen(Screen):
             font_name='SimHei',
             color=hex_to_rgba(COLORS['text_gray']),
             size_hint_y=None,
-            height=dp(25),
+            height=dp(20),
             halign='left'
         )
         lbl_hint.bind(size=lbl_hint.setter('text_size'))
@@ -120,18 +121,7 @@ class InputScreen(Screen):
         )
         btn_add.bind(on_press=self.add_name)
 
-        btn_view = Button(
-            text='👁 查看',
-            font_size=sp(14),
-            font_name='SimHei',
-            bold=True,
-            background_color=hex_to_rgba(COLORS['accent_yellow']),
-            color=hex_to_rgba(COLORS['bg_dark'])
-        )
-        btn_view.bind(on_press=self.show_names_list)
-
         btn_row.add_widget(btn_add)
-        btn_row.add_widget(btn_view)
         input_box.add_widget(btn_row)
 
         content.add_widget(input_box)
@@ -230,7 +220,7 @@ class InputScreen(Screen):
             spacing=dp(15),
             size_hint=(None, None),
             size=(dp(280), dp(50)),
-            pos_hint={'center_x': 0.5, 'y': 0.05}
+            pos_hint={'center_x': 0.5, 'y': 0.02}
         )
 
         btn_confirm = Button(
@@ -291,13 +281,31 @@ class InputScreen(Screen):
 
     def update_stats(self):
         """更新统计信息"""
-        self.stats_label.text = f'已添加：{len(self.names_list)} 人'
+        from collections import Counter
+        counter = Counter(self.names_list)
+        unique_count = len(counter)
+        total_count = len(self.names_list)
+        if unique_count != total_count:
+            self.stats_label.text = f'已添加：{total_count} 人（{unique_count} 个不同人名）'
+        else:
+            self.stats_label.text = f'已添加：{total_count} 人'
 
     def update_names_list(self):
-        """更新已添加人名列表显示"""
+        """更新已添加人名列表显示 - 合并相同人名"""
+        from collections import Counter
         self.names_layout.clear_widgets()
 
-        for i, name in enumerate(self.names_list):
+        counter = Counter(self.names_list)
+        # 按首次出现顺序排列
+        seen = set()
+        ordered_names = []
+        for name in self.names_list:
+            if name not in seen:
+                seen.add(name)
+                ordered_names.append(name)
+
+        for i, name in enumerate(ordered_names):
+            count = counter[name]
             row = BoxLayout(
                 orientation='horizontal',
                 size_hint_y=None,
@@ -314,14 +322,18 @@ class InputScreen(Screen):
                 width=dp(40)
             )
 
-            lbl_name = Label(
-                text=name,
+            display_text = f'{name} (×{count})' if count > 1 else name
+            lbl_name = Button(
+                text=display_text,
                 font_size=sp(14),
                 font_name='SimHei',
+                background_color=hex_to_rgba(COLORS['bg_light']),
                 color=hex_to_rgba(COLORS['text_light']),
                 halign='left'
             )
             lbl_name.bind(size=lbl_name.setter('text_size'))
+            if count > 1:
+                lbl_name.bind(on_press=lambda x, n=name, c=count: self.edit_name_count(n, c))
 
             btn_delete = Button(
                 text='❌',
@@ -330,110 +342,91 @@ class InputScreen(Screen):
                 width=dp(50),
                 background_color=hex_to_rgba(COLORS['accent_red'])
             )
-            btn_delete.bind(on_press=lambda x, idx=i: self.delete_name_inline(idx))
+            btn_delete.bind(on_press=lambda x, n=name: self.delete_name_by_name(n))
 
             row.add_widget(lbl_num)
             row.add_widget(lbl_name)
             row.add_widget(btn_delete)
             self.names_layout.add_widget(row)
 
-    def delete_name_inline(self, index):
-        """直接删除人名（不弹窗）"""
-        if 0 <= index < len(self.names_list):
-            del self.names_list[index]
-            self.update_stats()
-            self.update_names_list()
-
-    def show_names_list(self, instance):
-        """显示已添加的人名列表"""
-        if not self.names_list:
-            self.show_error('还没有添加任何人名！')
-            return
-
+    def edit_name_count(self, name, current_count):
+        """修改重复人名的出现次数"""
         content = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
 
-        # 标题
-        title = Label(
-            text=f'📋 已添加的人员列表 ({len(self.names_list)}人)',
+        lbl = Label(
+            text=f'修改 "{name}" 的出现次数',
             font_size=sp(16),
             font_name='SimHei',
-            bold=True,
-            color=hex_to_rgba(COLORS['accent_red']),
-            size_hint_y=None,
-            height=dp(30)
+            color=hex_to_rgba(COLORS['text_light'])
         )
-        content.add_widget(title)
+        content.add_widget(lbl)
 
-        # 列表
-        scroll = ScrollView()
-        list_layout = BoxLayout(orientation='vertical', spacing=dp(5), size_hint_y=None)
-        list_layout.bind(minimum_height=list_layout.setter('height'))
-
-        for i, name in enumerate(self.names_list, 1):
-            row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-
-            lbl_num = Label(
-                text=f'{i}.',
-                font_size=sp(14),
-                font_name='SimHei',
-                color=hex_to_rgba(COLORS['text_gray']),
-                size_hint_x=None,
-                width=dp(40)
-            )
-
-            lbl_name = Label(
-                text=name,
-                font_size=sp(14),
-                font_name='SimHei',
-                color=hex_to_rgba(COLORS['text_light']),
-                halign='left'
-            )
-            lbl_name.bind(size=lbl_name.setter('text_size'))
-
-            btn_delete = Button(
-                text='❌',
-                font_size=sp(12),
-                size_hint_x=None,
-                width=dp(50),
-                background_color=hex_to_rgba(COLORS['accent_red'])
-            )
-            btn_delete.bind(on_press=lambda x, idx=i-1: self.delete_name(idx, popup))
-
-            row.add_widget(lbl_num)
-            row.add_widget(lbl_name)
-            row.add_widget(btn_delete)
-            list_layout.add_widget(row)
-
-        scroll.add_widget(list_layout)
-        content.add_widget(scroll)
-
-        # 关闭按钮
-        btn_close = Button(
-            text='关闭',
-            font_size=sp(14),
+        count_input = TextInput(
+            text=str(current_count),
+            font_size=sp(20),
             font_name='SimHei',
+            background_color=hex_to_rgba(COLORS['bg_light']),
+            foreground_color=hex_to_rgba(COLORS['text_light']),
+            cursor_color=hex_to_rgba(COLORS['accent_green']),
+            halign='center',
+            multiline=False,
             size_hint_y=None,
             height=dp(45),
-            background_color=hex_to_rgba(COLORS['accent_blue'])
+            input_filter='int'
         )
-        content.add_widget(btn_close)
+        content.add_widget(count_input)
+
+        btn_box = BoxLayout(spacing=dp(10), size_hint_y=None, height=dp(45))
+
+        btn_confirm = Button(
+            text='确定',
+            font_size=sp(14),
+            font_name='SimHei',
+            bold=True,
+            background_color=hex_to_rgba(COLORS['accent_green'])
+        )
+
+        btn_cancel = Button(
+            text='取消',
+            font_size=sp(14),
+            font_name='SimHei',
+            bold=True,
+            background_color=hex_to_rgba(COLORS['accent_red'])
+        )
+
+        btn_box.add_widget(btn_confirm)
+        btn_box.add_widget(btn_cancel)
+        content.add_widget(btn_box)
 
         popup = Popup(
-            title='已添加的人员列表',
+            title='修改出现次数',
             content=content,
-            size_hint=(0.9, 0.7),
+            size_hint=(0.8, 0.3),
             auto_dismiss=False
         )
-        btn_close.bind(on_press=popup.dismiss)
+
+        def on_confirm(btn):
+            try:
+                new_count = int(count_input.text)
+                if new_count < 1:
+                    new_count = 1
+                # 更新 names_list：将该人名的数量调整为 new_count
+                self.names_list = [n for n in self.names_list if n != name] + [name] * new_count
+                self.update_stats()
+                self.update_names_list()
+                popup.dismiss()
+            except ValueError:
+                count_input.text = str(current_count)
+
+        btn_confirm.bind(on_press=on_confirm)
+        btn_cancel.bind(on_press=popup.dismiss)
         popup.open()
 
-    def delete_name(self, index, popup):
-        """删除人名（从弹窗）"""
-        if 0 <= index < len(self.names_list):
-            del self.names_list[index]
-            self.update_stats()
-            self.update_names_list()
-            popup.dismiss()
+    def delete_name_by_name(self, name):
+        """删除指定人名的所有出现"""
+        self.names_list = [n for n in self.names_list if n != name]
+        self.update_stats()
+        self.update_names_list()
 
     def confirm_input(self, instance):
         """确认输入"""
@@ -442,7 +435,7 @@ class InputScreen(Screen):
             return
 
         # 存储到App的数据中
-        app = self.manager.parent
+        app = App.get_running_app()
         app.imported_names = self.names_list.copy()
         app.import_source = '手动输入'
 

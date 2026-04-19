@@ -74,15 +74,17 @@ jobs:
         export PATH=$JAVA_HOME/bin:$PATH
         export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        # 启用详细日志并保存到文件
-        buildozer android debug 2>&1 | tee build_output.log
-        BUILD_EXIT_CODE=${PIPESTATUS[0]}
-        if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "=== BUILD FAILED ==="
-          echo "=== Build output log ==="
+        # 先尝试构建，如果失败则显示日志
+        buildozer android debug 2>&1 | tee build_output.log || true
+        # 检查构建结果
+        if [ ! -f bin/*.apk ]; then
+          echo "=== APK not found, checking logs ==="
           cat build_output.log
-          echo "=== Buildozer build log ==="
-          find .buildozer -name "build.log" -exec cat {} \; 2>/dev/null || true
+          # 查找并显示 buildozer 的详细日志
+          find .buildozer -name "*.log" -type f 2>/dev/null | head -5 | while read f; do
+            echo "=== $f ==="
+            tail -100 "$f"
+          done
           exit 1
         fi
 
@@ -91,10 +93,6 @@ jobs:
         echo "=== Checking for APK files ==="
         ls -la bin/ 2>/dev/null || echo "bin/ directory not found"
         find . -name "*.apk" -type f 2>/dev/null | head -20
-        echo "=== Current directory contents ==="
-        ls -la
-        echo "=== .buildozer directory ==="
-        ls -la .buildozer/ 2>/dev/null || echo ".buildozer not found"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -110,5 +108,7 @@ jobs:
       if: failure()
       with:
         name: build-logs
-        path: .buildozer/android/platform/build-*/build.log
+        path: |
+          build_output.log
+          .buildozer/**/*.log
         retention-days: 7

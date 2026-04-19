@@ -30,7 +30,7 @@ android.ndk = 25b
 android.archs = armeabi-v7a, arm64-v8a
 
 # 依赖库
-requirements = python3,kivy==2.3.1,openpyxl,xlrd,pillow
+requirements = python3,kivy==2.3.1,pillow,openpyxl
 
 [buildozer]
 # 日志级别 (0 = 错误, 1 = 警告, 2 = 信息, 3 = 调试)

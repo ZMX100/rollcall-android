@@ -21,6 +21,7 @@ from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
 from kivy.properties import StringProperty, ListProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,7 +71,7 @@ class ImportScreen(Screen):
 
         content = BoxLayout(
             orientation='vertical',
-            spacing=dp(25),
+            spacing=dp(10),
             size_hint_y=None,
             padding=dp(10)
         )
@@ -207,8 +208,8 @@ class ImportScreen(Screen):
             orientation='vertical',
             spacing=dp(6),
             size_hint_y=None,
-            height=dp(135),
-            padding=[dp(10), dp(8), dp(10), dp(10)]  # 调整内边距让内容在边框内
+            height=dp(120),
+            padding=[dp(10), dp(5), dp(10), dp(8)]
         )
 
         with box.canvas.before:
@@ -532,7 +533,7 @@ class ImportScreen(Screen):
             return
 
         # 存储到App的数据中
-        app = self.manager.parent
+        app = App.get_running_app()
         app.imported_names = names
         app.import_source = source
 

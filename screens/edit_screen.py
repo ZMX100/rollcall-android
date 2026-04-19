@@ -17,12 +17,14 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
 from kivy.uix.widget import Widget
+from kivy.uix.checkbox import CheckBox
 from kivy.graphics import Color, Rectangle, Line
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
-from kivy.properties import ListProperty, StringProperty, NumericProperty
+from kivy.properties import ListProperty, StringProperty, NumericProperty, BooleanProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -301,6 +303,30 @@ class EditScreen(Screen):
 
         right_box.add_widget(add_box)
 
+        # 可重复点名选项
+        repeat_box = BoxLayout(
+            spacing=dp(5),
+            size_hint_y=None,
+            height=dp(35)
+        )
+
+        self.repeat_checkbox = CheckBox(
+            size_hint_x=None,
+            width=dp(30),
+            color=hex_to_rgba(COLORS['accent_blue'])
+        )
+
+        lbl_repeat = Label(
+            text='🔄 可重复点名',
+            font_size=sp(14),
+            font_name='SimHei',
+            color=hex_to_rgba(COLORS['accent_blue'])
+        )
+
+        repeat_box.add_widget(self.repeat_checkbox)
+        repeat_box.add_widget(lbl_repeat)
+        right_box.add_widget(repeat_box)
+
         # 空白填充
         right_box.add_widget(Widget())
 
@@ -349,10 +375,22 @@ class EditScreen(Screen):
         self.bg_rect.pos = instance.pos
         self.bg_rect.size = instance.size
 
+    def get_data_dir(self):
+        """获取数据目录 - 与ListScreen/NameScreen保持一致"""
+        if os.path.exists('/sdcard'):
+            data_dir = '/sdcard/RollCall'
+        else:
+            data_dir = os.path.join(os.path.expanduser('~'), '.rollcall')
+
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+        return data_dir
+
     def on_enter(self):
         """进入界面时加载数据"""
-        app = self.manager.parent
-        if hasattr(app, 'editing_rollcall_data'):
+        app = App.get_running_app()
+        if app.editing_rollcall_data:
             self.rollcall_data = app.editing_rollcall_data
             self.load_data()
 
@@ -372,6 +410,9 @@ class EditScreen(Screen):
         self.names_list = names
         self.name_counts = counts
 
+        # 加载可重复点名状态
+        self.repeat_checkbox.active = self.rollcall_data.get('allow_repeat', False)
+
         # 更新列表显示
         self.update_names_list()
 
@@ -381,7 +422,7 @@ class EditScreen(Screen):
 
         for i, (name, count) in enumerate(zip(self.names_list, self.name_counts)):
             btn = Button(
-                text=f'{i+1}. {name} (×{count})',
+                text=f'{i+1}. {name} (出现{count}次)',
                 font_size=sp(14),
                 font_name='SimHei',
                 background_color=hex_to_rgba(COLORS['bg_light']),
@@ -523,20 +564,35 @@ class EditScreen(Screen):
         self.rollcall_data['name'] = self.name_input.text
         self.rollcall_data['names'] = self.names_list
         self.rollcall_data['name_counts'] = self.name_counts
+        self.rollcall_data['allow_repeat'] = self.repeat_checkbox.active
 
         # 保存到文件
-        app = self.manager.parent
-        if hasattr(app, 'editing_rollcall_id'):
-            rollcall_id = app.editing_rollcall_id
-            data_dir = app.get_data_dir()
-            filepath = os.path.join(data_dir, f'{rollcall_id}.json')
+        app = App.get_running_app()
+        rollcall_id = app.editing_rollcall_id
+        data_dir = self.get_data_dir()
+        filepath = os.path.join(data_dir, f'{rollcall_id}.json')
 
-            try:
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(self.rollcall_data, f, ensure_ascii=False, indent=2)
-                self.show_success('保存成功！', self.go_back)
-            except Exception as e:
-                self.show_error(f'保存失败：{str(e)}')
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(self.rollcall_data, f, ensure_ascii=False, indent=2)
+
+            # 更新索引文件中的名称（如果修改了名称）
+            index_file = os.path.join(data_dir, 'index.json')
+            if os.path.exists(index_file):
+                with open(index_file, 'r', encoding='utf-8') as f:
+                    index = json.load(f)
+
+                for item in index:
+                    if item['id'] == rollcall_id:
+                        item['name'] = self.name_input.text
+                        break
+
+                with open(index_file, 'w', encoding='utf-8') as f:
+                    json.dump(index, f, ensure_ascii=False, indent=2)
+
+            self.show_success('保存成功！', self.go_back)
+        except Exception as e:
+            self.show_error(f'保存失败：{str(e)}')
 
     def go_back(self, instance=None):
         """返回列表界面"""

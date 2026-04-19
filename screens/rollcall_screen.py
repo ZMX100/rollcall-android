@@ -26,6 +26,7 @@ from kivy.animation import Animation
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
 from kivy.properties import ListProperty, StringProperty, BooleanProperty, NumericProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -132,8 +133,7 @@ class RollCallScreen(Screen):
             Color(*hex_to_rgba(COLORS['bg_medium']))
             self.outer_bg = Rectangle(pos=self.outer_frame.pos, size=self.outer_frame.size)
             Color(*hex_to_rgba(COLORS['accent_red'], 0.5))
-            Line(rectangle=(self.outer_frame.x, self.outer_frame.y,
-                           self.outer_frame.width, self.outer_frame.height), width=dp(3))
+            self.outer_border = Line(rectangle=(0, 0, 0, 0), width=dp(3))
 
         self.outer_frame.bind(pos=self.update_outer, size=self.update_outer)
 
@@ -148,8 +148,7 @@ class RollCallScreen(Screen):
             Color(*hex_to_rgba(COLORS['bg_light']))
             self.inner_bg = Rectangle(pos=inner_frame.pos, size=inner_frame.size)
             Color(*hex_to_rgba(COLORS['accent_blue'], 0.3))
-            Line(rectangle=(inner_frame.x, inner_frame.y,
-                           inner_frame.width, inner_frame.height), width=dp(2))
+            self.inner_border = Line(rectangle=(0, 0, 0, 0), width=dp(2))
 
         inner_frame.bind(pos=self.update_inner, size=self.update_inner)
 
@@ -211,12 +210,11 @@ class RollCallScreen(Screen):
             Color(*hex_to_rgba(COLORS['bg_light']))
             self.display_bg = Rectangle(pos=display_frame.pos, size=display_frame.size)
             Color(*hex_to_rgba(COLORS['accent_red'], 0.5))
-            Line(rectangle=(display_frame.x, display_frame.y,
-                           display_frame.width, display_frame.height), width=dp(4))
+            self.display_border = Line(rectangle=(0, 0, 0, 0), width=dp(4))
 
         display_frame.bind(pos=self.update_display, size=self.update_display)
 
-        # 名字显示标签
+        # 名字显示标签 - 可点击触发点名
         self.name_display = Label(
             text='准备就绪',
             font_size=sp(50),
@@ -231,6 +229,8 @@ class RollCallScreen(Screen):
             self.name_bg = Rectangle(pos=self.name_display.pos, size=self.name_display.size)
 
         self.name_display.bind(pos=self.update_name_bg, size=self.update_name_bg)
+        # 点击人名框触发点名
+        self.name_display.bind(on_touch_down=self.on_name_display_touch)
 
         display_frame.add_widget(self.name_display)
         inner_frame.add_widget(display_frame)
@@ -243,31 +243,41 @@ class RollCallScreen(Screen):
         sep2.bind(pos=self.update_sep2, size=self.update_sep2)
         inner_frame.add_widget(sep2)
 
-        # 按钮区域 - 使用2列布局适应竖屏
-        button_box = GridLayout(
-            cols=2,
+        # 按钮区域 - 点名按钮独占一行，其余2列
+        button_box = BoxLayout(
+            orientation='vertical',
             spacing=dp(8),
             size_hint_y=None,
-            height=dp(180),
+            height=dp(190),
             padding=dp(5)
         )
 
-        # 开始点名按钮 - 最大最显眼
+        # 开始点名按钮 - 独占一行，最大最显眼
         self.roll_button = Button(
-            text='🎯\n开始点名',
-            font_size=sp(20),
+            text='🎯 开始点名',
+            font_size=sp(24),
             font_name='SimHei',
             bold=True,
             background_color=hex_to_rgba(COLORS['accent_red']),
-            color=hex_to_rgba(COLORS['white'])
+            color=hex_to_rgba(COLORS['white']),
+            size_hint_y=None,
+            height=dp(65)
         )
         self.roll_button.bind(on_press=self.roll_name)
         button_box.add_widget(self.roll_button)
 
+        # 其他按钮 - 2列布局
+        other_buttons = GridLayout(
+            cols=2,
+            spacing=dp(8),
+            size_hint_y=None,
+            height=dp(105)
+        )
+
         # 重置按钮
         if not self.allow_repeat:
             self.reset_button = Button(
-                text='🔄\n重置',
+                text='🔄 重置',
                 font_size=sp(14),
                 font_name='SimHei',
                 bold=True,
@@ -275,11 +285,11 @@ class RollCallScreen(Screen):
                 color=hex_to_rgba(COLORS['white'])
             )
             self.reset_button.bind(on_press=self.reset_display)
-            button_box.add_widget(self.reset_button)
+            other_buttons.add_widget(self.reset_button)
 
         # 名单按钮
         self.list_button = Button(
-            text='📋\n名单',
+            text='📋 名单',
             font_size=sp(14),
             font_name='SimHei',
             bold=True,
@@ -287,23 +297,11 @@ class RollCallScreen(Screen):
             color=hex_to_rgba(COLORS['bg_dark'])
         )
         self.list_button.bind(on_press=self.show_name_list)
-        button_box.add_widget(self.list_button)
-
-        # 全屏按钮
-        self.fullscreen_button = Button(
-            text='⛶\n全屏',
-            font_size=sp(14),
-            font_name='SimHei',
-            bold=True,
-            background_color=hex_to_rgba(COLORS['accent_blue']),
-            color=hex_to_rgba(COLORS['bg_dark'])
-        )
-        self.fullscreen_button.bind(on_press=self.toggle_fullscreen)
-        button_box.add_widget(self.fullscreen_button)
+        other_buttons.add_widget(self.list_button)
 
         # 退出按钮
         self.exit_button = Button(
-            text='❌\n退出',
+            text='❌ 退出',
             font_size=sp(14),
             font_name='SimHei',
             bold=True,
@@ -311,11 +309,11 @@ class RollCallScreen(Screen):
             color=hex_to_rgba(COLORS['white'])
         )
         self.exit_button.bind(on_press=self.exit_app)
-        button_box.add_widget(self.exit_button)
+        other_buttons.add_widget(self.exit_button)
 
         # 返回按钮
         self.back_button = Button(
-            text='↩\n返回',
+            text='↩ 返回',
             font_size=sp(14),
             font_name='SimHei',
             bold=True,
@@ -323,13 +321,15 @@ class RollCallScreen(Screen):
             color=hex_to_rgba(COLORS['white'])
         )
         self.back_button.bind(on_press=self.back_to_list)
-        button_box.add_widget(self.back_button)
+        other_buttons.add_widget(self.back_button)
+
+        button_box.add_widget(other_buttons)
 
         inner_frame.add_widget(button_box)
 
         # 底部提示文字
         footer = Label(
-            text='按屏幕任意位置快速点名 | 点击名单查看详情',
+            text='点击点名按钮或人名框开始点名 | 点击名单查看详情',
             font_size=sp(12),
             font_name='SimHei',
             color=hex_to_rgba(COLORS['text_gray']),
@@ -342,9 +342,6 @@ class RollCallScreen(Screen):
         anchor.add_widget(self.outer_frame)
         self.main_layout.add_widget(anchor)
 
-        # 添加点击事件 - 点击屏幕任意位置开始点名
-        self.main_layout.bind(on_touch_down=self.on_screen_touch)
-
         self.add_widget(self.main_layout)
 
     # 更新画布方法
@@ -355,20 +352,12 @@ class RollCallScreen(Screen):
     def update_outer(self, instance, value):
         self.outer_bg.pos = instance.pos
         self.outer_bg.size = instance.size
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            Color(*hex_to_rgba(COLORS['bg_medium']))
-            Rectangle(pos=instance.pos, size=instance.size)
-            Color(*hex_to_rgba(COLORS['accent_red'], 0.5))
-            Line(rectangle=(instance.x, instance.y, instance.width, instance.height), width=dp(3))
+        self.outer_border.rectangle = (instance.x, instance.y, instance.width, instance.height)
 
     def update_inner(self, instance, value):
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            Color(*hex_to_rgba(COLORS['bg_light']))
-            Rectangle(pos=instance.pos, size=instance.size)
-            Color(*hex_to_rgba(COLORS['accent_blue'], 0.3))
-            Line(rectangle=(instance.x, instance.y, instance.width, instance.height), width=dp(2))
+        self.inner_bg.pos = instance.pos
+        self.inner_bg.size = instance.size
+        self.inner_border.rectangle = (instance.x, instance.y, instance.width, instance.height)
 
     def update_sep1(self, instance, value):
         instance.canvas.clear()
@@ -385,12 +374,7 @@ class RollCallScreen(Screen):
     def update_display(self, instance, value):
         self.display_bg.pos = instance.pos
         self.display_bg.size = instance.size
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            Color(*hex_to_rgba(COLORS['bg_light']))
-            Rectangle(pos=instance.pos, size=instance.size)
-            Color(*hex_to_rgba(COLORS['accent_red'], 0.5))
-            Line(rectangle=(instance.x, instance.y, instance.width, instance.height), width=dp(4))
+        self.display_border.rectangle = (instance.x, instance.y, instance.width, instance.height)
 
     def update_name_bg(self, instance, value):
         self.name_bg.pos = instance.pos
@@ -469,21 +453,19 @@ class RollCallScreen(Screen):
                 Color(*hex_to_rgba(COLORS['accent_yellow']))
                 Ellipse(pos=(x * width, y * height), size=(dp(size*3), dp(size*3)))
 
-    def on_screen_touch(self, instance, touch):
-        """屏幕触摸事件"""
-        if self.collide_point(*touch.pos) and not self.animation_running:
-            if touch.y > dp(100):  # 避免点击底部按钮区域
-                self.roll_name(None)
+    def on_name_display_touch(self, instance, touch):
+        """点击人名框触发点名"""
+        if instance.collide_point(*touch.pos) and not self.animation_running:
+            self.roll_name(None)
+            return True
+        return False
 
     def on_enter(self):
         """进入界面时加载数据"""
-        app = self.manager.parent
-        if hasattr(app, 'current_rollcall_names'):
-            self.names = app.current_rollcall_names
-        if hasattr(app, 'current_rollcall_title'):
-            self.rollcall_name = app.current_rollcall_title
-        if hasattr(app, 'current_allow_repeat'):
-            self.allow_repeat = app.current_allow_repeat
+        app = App.get_running_app()
+        self.names = app.current_rollcall_names
+        self.rollcall_name = app.current_rollcall_title
+        self.allow_repeat = app.current_allow_repeat
 
         # 更新标题
         self.title_label.text = f'✨ {self.rollcall_name or "幸运点名器"} ✨'
@@ -630,7 +612,6 @@ class RollCallScreen(Screen):
     def end_animation(self):
         """结束动画"""
         self.animation_running = False
-        self.update_list_window()
 
     def reset_display(self, instance):
         """重置显示"""
@@ -639,7 +620,6 @@ class RollCallScreen(Screen):
             self.name_display.color = hex_to_rgba(COLORS['accent_green'])
             self.picked_names = []
             self.show_message('重置成功', '已重置所有点名记录！')
-            self.update_list_window()
 
     def show_name_list(self, instance):
         """显示人名列表"""
@@ -738,17 +718,6 @@ class RollCallScreen(Screen):
         )
         btn_close.bind(on_press=self.list_popup.dismiss)
         self.list_popup.open()
-
-    def update_list_window(self):
-        """更新名单窗口"""
-        if hasattr(self, 'list_popup') and self.list_popup:
-            self.list_popup.dismiss()
-            self.show_name_list(None)
-
-    def toggle_fullscreen(self, instance):
-        """切换全屏"""
-        # 在移动端全屏模式有限
-        pass
 
     def exit_app(self, instance):
         """退出应用"""

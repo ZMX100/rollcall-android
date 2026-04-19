@@ -22,6 +22,7 @@ from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
 from kivy.properties import ListProperty, DictProperty, StringProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -331,8 +332,8 @@ class RateScreen(Screen):
 
     def on_enter(self):
         """进入界面时加载数据"""
-        app = self.manager.parent
-        if hasattr(app, 'imported_names'):
+        app = App.get_running_app()
+        if app.imported_names:
             self.names = app.imported_names
             # 统计人名出现次数
             counter = Counter(self.names)
@@ -466,7 +467,7 @@ class RateScreen(Screen):
             expanded_names.extend([name] * count)
 
         # 存储数据并跳转到命名界面
-        app = self.manager.parent
+        app = App.get_running_app()
         app.expanded_names = expanded_names
         app.unique_names = self.unique_names.copy()
         app.name_counts = self.name_counts.copy()

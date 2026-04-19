@@ -21,6 +21,7 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -180,8 +181,8 @@ class NameScreen(Screen):
 
     def on_enter(self):
         """进入界面时更新统计"""
-        app = self.manager.parent
-        if hasattr(app, 'unique_names'):
+        app = App.get_running_app()
+        if app.unique_names:
             count = len(app.unique_names)
             self.stats_label.text = f'共 {count} 个人名'
 
@@ -208,8 +209,8 @@ class NameScreen(Screen):
             index = []
 
         # 获取数据
-        app = self.manager.parent
-        if not hasattr(app, 'expanded_names') or not app.expanded_names:
+        app = App.get_running_app()
+        if not app.expanded_names:
             self.show_error('没有数据可保存！')
             return
 

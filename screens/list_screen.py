@@ -21,6 +21,7 @@ from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
 from kivy.properties import ListProperty, DictProperty
+from kivy.app import App
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -315,7 +316,7 @@ class ListScreen(Screen):
             return
 
         # 设置当前点名器数据
-        app = self.manager.parent
+        app = App.get_running_app()
         app.current_rollcall_names = data.get('names', [])
         app.current_rollcall_title = data.get('name', '点名器')
         app.current_allow_repeat = data.get('allow_repeat', False)
@@ -331,7 +332,7 @@ class ListScreen(Screen):
             return
 
         # 设置编辑数据
-        app = self.manager.parent
+        app = App.get_running_app()
         app.editing_rollcall_id = rollcall_id
         app.editing_rollcall_data = data
 
