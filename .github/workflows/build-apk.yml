@@ -66,12 +66,24 @@ jobs:
         # 创建使用 Java 8 的 sdkmanager 包装脚本
         SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
         mkdir -p $SDK_DIR/tools/bin
-        cat > $SDK_DIR/tools/bin/sdkmanager << 'EOF'
+        # 查找 sdkmanager.jar 的正确位置
+        SDKMANAGER_JAR=$(find $SDK_DIR -name "sdkmanager.jar" 2>/dev/null | head -1)
+        if [ -z "$SDKMANAGER_JAR" ]; then
+          # 旧版 SDK tools 结构不同，直接调用 sdkmanager 脚本
+          cat > $SDK_DIR/tools/bin/sdkmanager << 'EOF'
         #!/bin/bash
         export JAVA_HOME=$JAVA_HOME_8_X64
         export PATH=$JAVA_HOME/bin:$PATH
-        exec $JAVA_HOME/bin/java -jar $HOME/.buildozer/android/platform/android-sdk/tools/lib/sdkmanager.jar "$@"
+        exec $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager "$@"
         EOF
+        else
+          cat > $SDK_DIR/tools/bin/sdkmanager << EOF
+        #!/bin/bash
+        export JAVA_HOME=$JAVA_HOME_8_X64
+        export PATH=\$JAVA_HOME/bin:\$PATH
+        exec \$JAVA_HOME/bin/java -jar $SDKMANAGER_JAR "\$@"
+        EOF
+        fi
         chmod +x $SDK_DIR/tools/bin/sdkmanager
         # 使用 Java 17 运行 buildozer，但 sdkmanager 会使用 Java 8
         export JAVA_HOME=$JAVA_HOME_17_X64
