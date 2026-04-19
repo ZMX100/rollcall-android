@@ -42,16 +42,27 @@ jobs:
         echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
 
-    - name: Build APK
+    - name: Setup Android SDK
       run: |
-        # 先尝试接受所有SDK许可证
+        SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
+        mkdir -p $SDK_DIR
+        cd $SDK_DIR
+        # 下载并解压 SDK tools
+        wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+        unzip -q sdk-tools-linux-4333796.zip
+        # 创建必要的目录和文件
         mkdir -p $HOME/.android
         touch $HOME/.android/repositories.cfg
-        # 创建licenses目录并添加许可证文件
-        mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        # 运行buildozer
+        mkdir -p $SDK_DIR/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $SDK_DIR/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
+        # 使用 Java 8 运行 sdkmanager
+        export JAVA_HOME=$JAVA_HOME_8_X64
+        yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
+
+    - name: Build APK
+      run: |
+        export JAVA_HOME=$JAVA_HOME_17_X64
         buildozer android debug 2>&1 || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && exit 1)
 
     - name: Upload APK
