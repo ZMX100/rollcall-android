@@ -44,10 +44,13 @@ jobs:
         # 下载旧版 SDK tools (buildozer 兼容的版本)
         wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
         unzip -q sdk-tools-linux-4333796.zip
-        # 接受许可证
-        yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR --licenses || true
+        # 创建 repositories.cfg 文件避免警告
+        mkdir -p $HOME/.android
+        touch $HOME/.android/repositories.cfg
+        # 接受许可证 (使用 echo 而不是 yes)
+        echo "y" | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR --licenses || true
         # 安装必要组件
-        $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
+        echo "y" | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
 
     - name: Set environment variables
       run: |
