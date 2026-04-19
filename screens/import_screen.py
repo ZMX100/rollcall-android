@@ -71,9 +71,9 @@ class ImportScreen(Screen):
 
         content = BoxLayout(
             orientation='vertical',
-            spacing=dp(10),
+            spacing=dp(8),
             size_hint_y=None,
-            padding=dp(10)
+            padding=[dp(5), dp(3), dp(5), dp(5)]
         )
         content.bind(minimum_height=content.setter('height'))
 
@@ -187,8 +187,8 @@ class ImportScreen(Screen):
             orientation='vertical',
             spacing=dp(4),
             size_hint_y=None,
-            height=dp(110),
-            padding=[dp(10), dp(3), dp(10), dp(5)]
+            height=dp(100),
+            padding=[dp(10), dp(2), dp(10), dp(4)]
         )
 
         with box.canvas.before:

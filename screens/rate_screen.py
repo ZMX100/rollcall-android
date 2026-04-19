@@ -123,12 +123,16 @@ class RateScreen(Screen):
         )
         right_box.add_widget(control_title)
 
-        # 控制面板容器
+        # 控制面板容器 - 用AnchorLayout使其纵向居中
+        control_anchor = AnchorLayout(anchor_y='center')
+
         control_container = BoxLayout(
             orientation='vertical',
             spacing=dp(10),
-            padding=dp(10)
+            padding=dp(10),
+            size_hint_y=None
         )
+        control_container.bind(minimum_height=control_container.setter('height'))
         with control_container.canvas.before:
             Color(*hex_to_rgba(COLORS['bg_medium']))
             self.control_bg = Rectangle(pos=control_container.pos, size=control_container.size)
@@ -252,7 +256,8 @@ class RateScreen(Screen):
         repeat_box.add_widget(lbl_repeat)
         control_container.add_widget(repeat_box)
 
-        right_box.add_widget(control_container)
+        control_anchor.add_widget(control_container)
+        right_box.add_widget(control_anchor)
         content.add_widget(right_box)
 
         layout.add_widget(content)
