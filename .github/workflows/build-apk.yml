@@ -75,7 +75,13 @@ jobs:
         export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
         # 启用详细日志并保存到文件
-        buildozer --verbose android debug 2>&1 | tee build_output.log || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && cat build_output.log && exit 1)
+        buildozer --verbose android debug 2>&1 | tee build_output.log
+        BUILD_EXIT_CODE=${PIPESTATUS[0]}
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "=== BUILD FAILED ==="
+          cat .buildozer/android/platform/build-*/build.log 2>/dev/null || true
+          exit 1
+        fi
 
     - name: Check APK exists
       run: |
