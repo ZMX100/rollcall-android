@@ -51,7 +51,8 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
+        # 使用 Java 11 以兼容旧版 SDK tools
+        echo "JAVA_HOME=$JAVA_HOME_11_X64" >> $GITHUB_ENV
         echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
 
