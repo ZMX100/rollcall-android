@@ -36,32 +36,16 @@ jobs:
           libncurses5-dev libreadline-dev tk-dev openjdk-17-jdk unzip zip wget \
           || true
 
-    - name: Setup Android SDK manually
-      run: |
-        SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
-        mkdir -p $SDK_DIR
-        cd $SDK_DIR
-        # 下载旧版 SDK tools (buildozer 兼容的版本)
-        wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
-        unzip -q sdk-tools-linux-4333796.zip
-        # 创建 repositories.cfg 文件避免警告
-        mkdir -p $HOME/.android
-        touch $HOME/.android/repositories.cfg
-        # 接受许可证 (使用 echo 而不是 yes)
-        echo "y" | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR --licenses || true
-        # 安装必要组件
-        echo "y" | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
-
     - name: Set environment variables
       run: |
-        # 使用 Java 8 以兼容旧版 SDK tools
-        echo "JAVA_HOME=$JAVA_HOME_8_X64" >> $GITHUB_ENV
+        echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
         echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
 
     - name: Build APK
       run: |
-        buildozer android debug 2>&1 || (cat .buildozer/android/platform/build-*/build.log 2>/dev/null || true && exit 1)
+        # 使用 printf 持续输出 'y' 来接受所有许可证
+        printf 'y\n%.0s' {1..100} | buildozer android debug 2>&1 || (cat .buildozer/android/platform/build-*/build.log 2>/dev/null || true && exit 1)
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
