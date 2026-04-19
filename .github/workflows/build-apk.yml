@@ -39,30 +39,33 @@ jobs:
     - name: Setup Android SDK
       run: |
         SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
-        mkdir -p $SDK_DIR
-        cd $SDK_DIR
-        # 下载并解压 SDK tools
-        wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
-        unzip -q sdk-tools-linux-4333796.zip
+        mkdir -p $SDK_DIR/cmdline-tools
+        cd $SDK_DIR/cmdline-tools
+        # 下载新版命令行工具（支持 Java 17）
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q commandlinetools-linux-11076708_latest.zip
+        mv cmdline-tools latest
         # 创建必要的目录和文件
         mkdir -p $HOME/.android
         touch $HOME/.android/repositories.cfg
         mkdir -p $SDK_DIR/licenses
         echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $SDK_DIR/licenses/android-sdk-license
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
-        # 安装必要组件（使用 GitHub Actions 提供的 Java 8）
-        export JAVA_HOME=$JAVA_HOME_8_X64
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $SDK_DIR/licenses/android-sdk-preview-license
+        # 安装必要组件（使用 Java 17）
+        export JAVA_HOME=$JAVA_HOME_17_X64
         export PATH=$JAVA_HOME/bin:$PATH
-        yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
+        yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" "cmdline-tools;latest" || true
 
     - name: Build APK
       run: |
-        # 使用 Java 8 运行整个构建（旧版 SDK tools 需要）
-        export JAVA_HOME=$JAVA_HOME_8_X64
+        # 使用 Java 17 运行构建（与 buildozer.spec 中的 android.java_version = 17 保持一致）
+        export JAVA_HOME=$JAVA_HOME_17_X64
         export PATH=$JAVA_HOME/bin:$PATH
         export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        buildozer android debug 2>&1 || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && exit 1)
+        # 启用详细日志并保存到文件
+        buildozer --verbose android debug 2>&1 | tee build_output.log || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && cat build_output.log && exit 1)
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
