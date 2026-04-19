@@ -45,6 +45,16 @@ jobs:
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
         unzip -q commandlinetools-linux-11076708_latest.zip
         mv cmdline-tools latest
+        # 创建旧版 tools 目录结构（buildozer 需要）
+        mkdir -p $SDK_DIR/tools/bin
+        # 创建 sdkmanager 包装脚本
+        cat > $SDK_DIR/tools/bin/sdkmanager << 'EOF'
+        #!/bin/bash
+        export JAVA_HOME=$JAVA_HOME_17_X64
+        export PATH=$JAVA_HOME/bin:$PATH
+        exec $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk "$@"
+        EOF
+        chmod +x $SDK_DIR/tools/bin/sdkmanager
         # 创建必要的目录和文件
         mkdir -p $HOME/.android
         touch $HOME/.android/repositories.cfg
