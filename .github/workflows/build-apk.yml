@@ -67,13 +67,24 @@ jobs:
         # 启用详细日志并保存到文件
         buildozer --verbose android debug 2>&1 | tee build_output.log || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && cat build_output.log && exit 1)
 
+    - name: Check APK exists
+      run: |
+        echo "=== Checking for APK files ==="
+        ls -la bin/ 2>/dev/null || echo "bin/ directory not found"
+        find . -name "*.apk" -type f 2>/dev/null | head -20
+        echo "=== Buildozer bin directory ==="
+        ls -la .buildozer/android/app/build/outputs/apk/debug/ 2>/dev/null || echo "Gradle output not found"
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
         name: android-apk
-        path: bin/*.apk
+        path: |
+          bin/*.apk
+          .buildozer/android/app/build/outputs/apk/debug/*.apk
         retention-days: 30
+        if-no-files-found: warn
 
     - name: Upload build logs on failure
       uses: actions/upload-artifact@v4
