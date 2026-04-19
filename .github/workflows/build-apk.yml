@@ -58,10 +58,22 @@ jobs:
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
         # 使用 Java 8 运行 sdkmanager
         export JAVA_HOME=$JAVA_HOME_8_X64
+        export PATH=$JAVA_HOME/bin:$PATH
         yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
 
     - name: Build APK
       run: |
+        # 创建使用 Java 8 的 sdkmanager 包装脚本
+        SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
+        mkdir -p $SDK_DIR/tools/bin
+        cat > $SDK_DIR/tools/bin/sdkmanager << 'EOF'
+        #!/bin/bash
+        export JAVA_HOME=$JAVA_HOME_8_X64
+        export PATH=$JAVA_HOME/bin:$PATH
+        exec $JAVA_HOME/bin/java -jar $HOME/.buildozer/android/platform/android-sdk/tools/lib/sdkmanager.jar "$@"
+        EOF
+        chmod +x $SDK_DIR/tools/bin/sdkmanager
+        # 使用 Java 17 运行 buildozer，但 sdkmanager 会使用 Java 8
         export JAVA_HOME=$JAVA_HOME_17_X64
         buildozer android debug 2>&1 || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && exit 1)
 
