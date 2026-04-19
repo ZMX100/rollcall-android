@@ -44,8 +44,15 @@ jobs:
 
     - name: Build APK
       run: |
-        # 使用 printf 持续输出 'y' 来接受所有许可证
-        printf 'y\n%.0s' {1..100} | buildozer android debug 2>&1 || (cat .buildozer/android/platform/build-*/build.log 2>/dev/null || true && exit 1)
+        # 先尝试接受所有SDK许可证
+        mkdir -p $HOME/.android
+        touch $HOME/.android/repositories.cfg
+        # 创建licenses目录并添加许可证文件
+        mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+        # 运行buildozer
+        buildozer android debug 2>&1 || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && exit 1)
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
