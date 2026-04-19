@@ -33,7 +33,7 @@ jobs:
           libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
           zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
           libsqlite3-dev libffi-dev libssl-dev autoconf automake libtool pkg-config \
-          libncurses5-dev libreadline-dev tk-dev openjdk-8-jdk unzip zip wget \
+          libncurses5-dev libreadline-dev tk-dev unzip zip wget \
           || true
 
     - name: Setup Android SDK
@@ -50,14 +50,16 @@ jobs:
         mkdir -p $SDK_DIR/licenses
         echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $SDK_DIR/licenses/android-sdk-license
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
-        # 安装必要组件
-        export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+        # 安装必要组件（使用 GitHub Actions 提供的 Java 8）
+        export JAVA_HOME=$JAVA_HOME_8_X64
+        export PATH=$JAVA_HOME/bin:$PATH
         yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
 
     - name: Build APK
       run: |
         # 使用 Java 8 运行整个构建（旧版 SDK tools 需要）
-        export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+        export JAVA_HOME=$JAVA_HOME_8_X64
+        export PATH=$JAVA_HOME/bin:$PATH
         export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
         buildozer android debug 2>&1 || (echo "=== BUILD FAILED ===" && cat .buildozer/android/platform/build-*/build.log 2>/dev/null && exit 1)
