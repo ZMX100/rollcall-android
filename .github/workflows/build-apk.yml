@@ -19,66 +19,41 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Update package lists
-      run: sudo apt-get update || true
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get install -y \
-          python3-pip \
-          build-essential \
-          git \
-          ffmpeg \
-          libsdl2-dev \
-          libsdl2-image-dev \
-          libsdl2-mixer-dev \
-          libsdl2-ttf-dev \
-          libportmidi-dev \
-          libswscale-dev \
-          libavformat-dev \
-          libavcodec-dev \
-          zlib1g-dev \
-          libgstreamer1.0 \
-          gstreamer1.0-plugins-base \
-          gstreamer1.0-plugins-good \
-          libsqlite3-dev \
-          libffi-dev \
-          libssl-dev \
-          autoconf \
-          automake \
-          libtool \
-          pkg-config \
-          libncurses5-dev \
-          libreadline-dev \
-          tk-dev \
-          openjdk-17-jdk \
-          unzip \
-          zip \
-          || true
-
-    - name: Install buildozer and cython
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install buildozer cython
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update || true
+        sudo apt-get install -y \
+          python3-pip build-essential git ffmpeg \
+          libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+          libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+          zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+          libsqlite3-dev libffi-dev libssl-dev autoconf automake libtool pkg-config \
+          libncurses5-dev libreadline-dev tk-dev openjdk-17-jdk unzip zip wget \
+          || true
+
+    - name: Setup Android SDK manually
+      run: |
+        SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
+        mkdir -p $SDK_DIR
+        cd $SDK_DIR
+        # 下载旧版 SDK tools (buildozer 兼容的版本)
+        wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+        unzip -q sdk-tools-linux-4333796.zip
+        # 接受许可证
+        yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR --licenses || true
+        # 安装必要组件
+        $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
 
     - name: Set environment variables
       run: |
         echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
         echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-
-    - name: Setup Android SDK
-      run: |
-        # 下载并安装 Android SDK
-        mkdir -p $HOME/.buildozer/android/platform/android-sdk
-        cd $HOME/.buildozer/android/platform/android-sdk
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-        export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-        yes | sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses || true
-        sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
 
     - name: Build APK
       run: |
