@@ -82,17 +82,17 @@ jobs:
         echo "=== Checking for APK files ==="
         ls -la bin/ 2>/dev/null || echo "bin/ directory not found"
         find . -name "*.apk" -type f 2>/dev/null | head -20
-        echo "=== Buildozer bin directory ==="
-        ls -la .buildozer/android/app/build/outputs/apk/debug/ 2>/dev/null || echo "Gradle output not found"
+        echo "=== Current directory contents ==="
+        ls -la
+        echo "=== .buildozer directory ==="
+        ls -la .buildozer/ 2>/dev/null || echo ".buildozer not found"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
         name: android-apk
-        path: |
-          bin/*.apk
-          .buildozer/android/app/build/outputs/apk/debug/*.apk
+        path: bin/**/*.apk
         retention-days: 30
         if-no-files-found: warn
 
