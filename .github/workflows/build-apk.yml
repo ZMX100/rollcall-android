@@ -26,89 +26,49 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo apt-get update || true
+        sudo apt-get update
         sudo apt-get install -y \
           python3-pip build-essential git ffmpeg \
           libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
           libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
           zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
           libsqlite3-dev libffi-dev libssl-dev autoconf automake libtool pkg-config \
-          libncurses5-dev libreadline-dev tk-dev unzip zip wget \
-          || true
+          libncurses5-dev libreadline-dev tk-dev unzip zip wget
 
     - name: Setup Android SDK
       run: |
-        SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
-        mkdir -p $SDK_DIR/cmdline-tools
-        cd $SDK_DIR/cmdline-tools
-        # 下载新版命令行工具（支持 Java 17）
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        mv cmdline-tools latest
-        # 创建旧版 tools 目录结构（buildozer 需要）
-        mkdir -p $SDK_DIR/tools/bin
-        # 创建 sdkmanager 包装脚本
-        cat > $SDK_DIR/tools/bin/sdkmanager << 'EOF'
-        #!/bin/bash
+        # 使用 GitHub Actions 预装的 Android SDK
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+        # 安装所需的 SDK 组件
         export JAVA_HOME=$JAVA_HOME_17_X64
         export PATH=$JAVA_HOME/bin:$PATH
-        exec $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk "$@"
-        EOF
-        chmod +x $SDK_DIR/tools/bin/sdkmanager
-        # 创建必要的目录和文件
-        mkdir -p $HOME/.android
-        touch $HOME/.android/repositories.cfg
-        mkdir -p $SDK_DIR/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $SDK_DIR/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $SDK_DIR/licenses/android-sdk-preview-license
-        # 安装必要组件（使用 Java 17）
-        export JAVA_HOME=$JAVA_HOME_17_X64
-        export PATH=$JAVA_HOME/bin:$PATH
-        yes | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK_DIR "platform-tools" "build-tools;33.0.0" "platforms;android-33" "cmdline-tools;latest" || true
+        yes | sdkmanager --licenses || true
+        sdkmanager "platform-tools" "build-tools;33.0.0" "platforms;android-33" || true
+        # 创建 buildozer 需要的目录结构
+        mkdir -p $HOME/.buildozer/android/platform
+        ln -sf $ANDROID_HOME $HOME/.buildozer/android/platform/android-sdk
 
     - name: Build APK
       run: |
-        # 使用 Java 17 运行构建（与 buildozer.spec 中的 android.java_version = 17 保持一致）
         export JAVA_HOME=$JAVA_HOME_17_X64
         export PATH=$JAVA_HOME/bin:$PATH
-        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        # 先尝试构建，如果失败则显示日志
-        buildozer android debug 2>&1 | tee build_output.log || true
-        # 检查构建结果
-        if [ ! -f bin/*.apk ]; then
-          echo "=== APK not found, checking logs ==="
-          cat build_output.log
-          # 查找并显示 buildozer 的详细日志
-          find .buildozer -name "*.log" -type f 2>/dev/null | head -5 | while read f; do
-            echo "=== $f ==="
-            tail -100 "$f"
-          done
-          exit 1
-        fi
-
-    - name: Check APK exists
-      run: |
-        echo "=== Checking for APK files ==="
-        ls -la bin/ 2>/dev/null || echo "bin/ directory not found"
-        find . -name "*.apk" -type f 2>/dev/null | head -20
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+        buildozer android debug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
         name: android-apk
-        path: bin/**/*.apk
+        path: bin/*.apk
         retention-days: 30
-        if-no-files-found: warn
 
     - name: Upload build logs on failure
       uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: build-logs
-        path: |
-          build_output.log
-          .buildozer/**/*.log
+        path: .buildozer/**/*.log
         retention-days: 7

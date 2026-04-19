@@ -417,10 +417,26 @@ class EditScreen(Screen):
         self.update_names_list()
 
     def update_names_list(self):
-        """更新人名列表显示"""
+        """更新人名列表显示 - 合并相同人名"""
+        from collections import Counter
         self.names_layout.clear_widgets()
 
-        for i, (name, count) in enumerate(zip(self.names_list, self.name_counts)):
+        # 统计每个人名的出现次数
+        counter = Counter(self.names_list)
+        # 按首次出现顺序排列
+        seen = set()
+        ordered = []
+        for name in self.names_list:
+            if name not in seen:
+                seen.add(name)
+                ordered.append(name)
+
+        # 保存合并后的数据供选中/修改使用
+        self._merged_names = ordered
+        self._merged_counts = [counter[n] for n in ordered]
+
+        for i, name in enumerate(ordered):
+            count = counter[name]
             btn = Button(
                 text=f'{i+1}. {name} (出现{count}次)',
                 font_size=sp(14),
@@ -436,8 +452,8 @@ class EditScreen(Screen):
     def select_name(self, index):
         """选择人名"""
         self.selected_index = index
-        name = self.names_list[index]
-        count = self.name_counts[index]
+        name = self._merged_names[index]
+        count = self._merged_counts[index]
 
         self.selected_name_label.text = name
         self.count_input.text = str(count)
@@ -478,7 +494,10 @@ class EditScreen(Screen):
             if new_count < 1:
                 new_count = 1
 
-            self.name_counts[self.selected_index] = new_count
+            name = self._merged_names[self.selected_index]
+            # 更新展开列表：移除该人名所有出现，再添加 new_count 个
+            self.names_list = [n for n in self.names_list if n != name] + [name] * new_count
+            self.name_counts = [1] * len(self.names_list)
             self.update_names_list()
             self.show_success('修改成功！')
         except:
@@ -490,10 +509,12 @@ class EditScreen(Screen):
             self.show_error('请先选择一个人名！')
             return
 
+        name = self._merged_names[self.selected_index]
+
         # 显示确认对话框
         content = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
         lbl = Label(
-            text=f'确定要删除 "{self.names_list[self.selected_index]}" 吗？',
+            text=f'确定要删除 "{name}" 吗？',
             font_size=sp(14),
             font_name='SimHei',
             color=hex_to_rgba(COLORS['text_light'])
@@ -528,8 +549,8 @@ class EditScreen(Screen):
         )
 
         def on_confirm(btn):
-            del self.names_list[self.selected_index]
-            del self.name_counts[self.selected_index]
+            self.names_list = [n for n in self.names_list if n != name]
+            self.name_counts = [1] * len(self.names_list)
             self.selected_index = -1
             self.selected_name_label.text = '请选择一个人名'
             self.count_input.text = '0'

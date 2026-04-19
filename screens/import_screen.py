@@ -54,14 +54,14 @@ class ImportScreen(Screen):
             font_name='SimHei',
             bold=True,
             color=hex_to_rgba(COLORS['accent_red']),
-            pos_hint={'center_x': 0.5, 'center_y': 0.92}
+            pos_hint={'center_x': 0.5, 'center_y': 0.95}
         )
         layout.add_widget(title)
 
         # 主内容区域 - 使用ScrollView添加滚动条
         scroll_view = ScrollView(
-            size_hint=(0.8, 0.75),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            size_hint=(0.85, 0.82),
+            pos_hint={'center_x': 0.5, 'center_y': 0.45},
             bar_width=dp(8),
             bar_color=hex_to_rgba(COLORS['accent_red']),
             bar_inactive_color=hex_to_rgba(COLORS['bg_light']),
@@ -161,27 +161,6 @@ class ImportScreen(Screen):
         method4_box.add_widget(btn_paste)
         content.add_widget(method4_box)
 
-        # 方法5: 从已有点名器导入
-        method5_box = self.create_method_box(
-            '方法五',
-            '从已有点名器导入',
-            '选择之前创建的点名器导入人名',
-            '#e94560'
-        )
-        btn_existing = Button(
-            text='📋 选择已有点名器',
-            font_size=sp(14),
-            font_name='SimHei',
-            bold=True,
-            background_color=hex_to_rgba(COLORS['accent_red']),
-            color=hex_to_rgba(COLORS['white']),
-            size_hint_y=None,
-            height=dp(45)
-        )
-        btn_existing.bind(on_press=self.show_existing_rollcall)
-        method5_box.add_widget(btn_existing)
-        content.add_widget(method5_box)
-
         scroll_view.add_widget(content)
         layout.add_widget(scroll_view)
 
@@ -206,10 +185,10 @@ class ImportScreen(Screen):
         """创建方法说明框"""
         box = BoxLayout(
             orientation='vertical',
-            spacing=dp(6),
+            spacing=dp(4),
             size_hint_y=None,
-            height=dp(120),
-            padding=[dp(10), dp(5), dp(10), dp(8)]
+            height=dp(110),
+            padding=[dp(10), dp(3), dp(10), dp(5)]
         )
 
         with box.canvas.before:
@@ -221,30 +200,38 @@ class ImportScreen(Screen):
         box.bind(pos=self.update_box_bg, size=self.update_box_bg)
         box.color_hex = color_hex
 
+        # 方法编号 + 标题合并为一行
+        title_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(22),
+            spacing=dp(5)
+        )
+
         lbl_num = Label(
-            text=method_num,
+            text=f'[{method_num}]',
             font_size=sp(12),
             font_name='SimHei',
             color=hex_to_rgba(color_hex),
-            size_hint_y=None,
-            height=dp(20),
+            size_hint_x=None,
+            width=dp(50),
             halign='left'
         )
         lbl_num.bind(size=lbl_num.setter('text_size'))
-        box.add_widget(lbl_num)
 
         lbl_title = Label(
             text=title,
-            font_size=sp(16),
+            font_size=sp(15),
             font_name='SimHei',
             bold=True,
             color=hex_to_rgba(COLORS['text_light']),
-            size_hint_y=None,
-            height=dp(25),
             halign='left'
         )
         lbl_title.bind(size=lbl_title.setter('text_size'))
-        box.add_widget(lbl_title)
+
+        title_row.add_widget(lbl_num)
+        title_row.add_widget(lbl_title)
+        box.add_widget(title_row)
 
         lbl_desc = Label(
             text=desc,
@@ -252,7 +239,7 @@ class ImportScreen(Screen):
             font_name='SimHei',
             color=hex_to_rgba(COLORS['text_gray']),
             size_hint_y=None,
-            height=dp(20),
+            height=dp(18),
             halign='left'
         )
         lbl_desc.bind(size=lbl_desc.setter('text_size'))
@@ -474,11 +461,6 @@ class ImportScreen(Screen):
         btn_confirm.bind(on_press=on_confirm)
         btn_cancel.bind(on_press=popup.dismiss)
         popup.open()
-
-    def show_existing_rollcall(self, instance):
-        """显示已有点名器列表"""
-        # 跳转到列表界面
-        self.manager.current = 'list'
 
     def import_from_excel(self, filepath):
         """从Excel文件导入"""

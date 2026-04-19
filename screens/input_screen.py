@@ -65,23 +65,7 @@ class InputScreen(Screen):
             pos_hint={'center_x': 0.5, 'center_y': 0.48}
         )
 
-        # 输入框区域
-        input_box = BoxLayout(
-            orientation='vertical',
-            spacing=dp(5),
-            size_hint_y=None,
-            height=dp(105),
-            padding=[dp(10), dp(2), dp(10), dp(10)]  # 上内边距减小，让字体上移
-        )
-
-        with input_box.canvas.before:
-            Color(*hex_to_rgba(COLORS['bg_medium']))
-            self.input_bg = Rectangle(pos=input_box.pos, size=input_box.size)
-            Color(*hex_to_rgba(COLORS['accent_red']))
-            Line(rectangle=(input_box.x, input_box.y, input_box.width, input_box.height), width=dp(2))
-
-        input_box.bind(pos=self.update_input_bg, size=self.update_input_bg)
-
+        # "请输入名字："单独在方框上方
         lbl_hint = Label(
             text='请输入名字：',
             font_size=sp(14),
@@ -92,7 +76,24 @@ class InputScreen(Screen):
             halign='left'
         )
         lbl_hint.bind(size=lbl_hint.setter('text_size'))
-        input_box.add_widget(lbl_hint)
+        content.add_widget(lbl_hint)
+
+        # 输入框区域（方框）
+        input_box = BoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            size_hint_y=None,
+            height=dp(110),
+            padding=[dp(15), dp(18), dp(15), dp(10)]
+        )
+
+        with input_box.canvas.before:
+            Color(*hex_to_rgba(COLORS['bg_medium']))
+            self.input_bg = Rectangle(pos=input_box.pos, size=input_box.size)
+            Color(*hex_to_rgba(COLORS['accent_red']))
+            Line(rectangle=(input_box.x, input_box.y, input_box.width, input_box.height), width=dp(2))
+
+        input_box.bind(pos=self.update_input_bg, size=self.update_input_bg)
 
         self.name_input = TextInput(
             multiline=False,
@@ -309,8 +310,8 @@ class InputScreen(Screen):
             row = BoxLayout(
                 orientation='horizontal',
                 size_hint_y=None,
-                height=dp(40),
-                spacing=dp(10)
+                height=dp(35),
+                spacing=dp(5)
             )
 
             lbl_num = Label(
@@ -319,7 +320,7 @@ class InputScreen(Screen):
                 font_name='SimHei',
                 color=hex_to_rgba(COLORS['text_gray']),
                 size_hint_x=None,
-                width=dp(40)
+                width=dp(30)
             )
 
             display_text = f'{name} (×{count})' if count > 1 else name
@@ -329,7 +330,8 @@ class InputScreen(Screen):
                 font_name='SimHei',
                 background_color=hex_to_rgba(COLORS['bg_light']),
                 color=hex_to_rgba(COLORS['text_light']),
-                halign='left'
+                halign='left',
+                valign='middle'
             )
             lbl_name.bind(size=lbl_name.setter('text_size'))
             if count > 1:
@@ -339,7 +341,7 @@ class InputScreen(Screen):
                 text='❌',
                 font_size=sp(12),
                 size_hint_x=None,
-                width=dp(50),
+                width=dp(40),
                 background_color=hex_to_rgba(COLORS['accent_red'])
             )
             btn_delete.bind(on_press=lambda x, n=name: self.delete_name_by_name(n))
